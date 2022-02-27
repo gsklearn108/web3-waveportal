@@ -4,6 +4,14 @@
   width: 100%;
   margin-top: 64px;
 }
+.infoContainer {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  max-width: 600px;
+  color: blue;
+}
+
 
 .dataContainer {
   display: flex;

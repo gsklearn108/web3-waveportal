@@ -9,6 +9,7 @@ export default function App() {
   const [waveMessage, setWaveMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [allWaves, setAllWaves] = useState([]);
+  const [infoMessage, setInfoMessage] = useState("");
   
   const [currentAccount, setCurrentAccount] = useState("");
 
@@ -108,6 +109,7 @@ export default function App() {
 
       if (ethereum){
         setLoading(true);
+        setInfoMessage("Transaction Initiated");
         const provider = new ethers.providers.Web3Provider(ethereum);
         const signer = provider.getSigner();
 
@@ -116,7 +118,7 @@ export default function App() {
         console.log("Total waves count from contract : ", totalWavesCount.toNumber());
         setTotalWaves(totalWavesCount.toNumber());
 
-        const waveTx = await waveContract.wave(waveMessage);
+        const waveTx = await waveContract.wave(waveMessage, {gasLimit:300000});
         console.log("Mining ... ", waveTx.hash)
 
         await waveTx.wait();
@@ -125,27 +127,62 @@ export default function App() {
         totalWavesCount = await waveContract.getTotalWaves();
         console.log("Total waves count from contract : ", totalWavesCount.toNumber());
         setTotalWaves(totalWavesCount.toNumber());
-        getAllWaves();
+        setInfoMessage("Transaction Completed Successfully");
+        // getAllWaves();
         setWaveMessage("");
         setLoading(false);
       } else {
         console.log("Ethereum object does not exist");
+        setInfoMessage("Ethereum object does not exist");
       }
 
       
     }catch (error){
       console.log(error);
+      setInfoMessage(error.Error);
     }
   }
 
   useEffect(() => {
     checkIfWalletIsConnected();
-    getAllWaves();
+    // getAllWaves();
+
+    let waveContract;
+
+    const onNewWave = (from, timestamp, message) => {
+      console.log("New Event", from, timestamp, message);
+      setAllWaves(prevState => [
+        ...prevState,
+       {
+        address: from,
+        timestamp: new Date(timestamp * 1000),
+        message: message, 
+      },
+      ]);
+    }
+
+    if (window.ethereum){
+      const provider = new ethers.providers.Web3Provider(window.ethereum);
+      const signer = provider.getSigner();
+      const waveContract = new ethers.Contract(contractAddress, contractABI, signer);
+      waveContract.on("NewWave", onNewWave);
+    }
+
+    return () => {
+      if(waveContract){
+        waveContract.off("NewWave", onNewWave);
+      }
+    }
+    
   }, []);  
   
   return (
     <div className="mainContainer">
-
+      
+    <div className="infoContainer"> 
+ 
+    </div>
+      
       <div className="dataContainer">
         <div className="header">
         👋 Hey there!
@@ -164,6 +201,8 @@ export default function App() {
         <button className="waveButton" onClick={wave}>
           {loading? 'Loading...' : 'Wave at Me'}
         </button>
+        <br />
+        <div className="infoMessage">{infoMessage}</div>
         
         {!currentAccount && (
         
